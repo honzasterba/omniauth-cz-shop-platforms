@@ -1,0 +1,13 @@
+*.gem
+.bundle
+.config
+.ruby-gemset
+.ruby-version
+.rvmrc
+rdoc
+spec/reports
+test/tmp
+test/version_tmp
+tmp
+.idea/
+Gemfile.lock
