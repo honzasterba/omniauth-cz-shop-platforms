@@ -2,10 +2,10 @@
 
 require 'spec_helper'
 require 'json'
-require 'omniauth-seznam-cz'
+require 'omniauth-cz-shop-platforms'
 require 'stringio'
 
-describe OmniAuth::Strategies::SeznamCz do
+describe OmniAuth::Strategies::WebAreal do
   let(:request) { double('Request', params: {}, cookies: {}, env: {}) }
   let(:app) do
     lambda do
@@ -14,7 +14,7 @@ describe OmniAuth::Strategies::SeznamCz do
   end
 
   subject do
-    OmniAuth::Strategies::SeznamCz.new(app, 'appid', 'secret', @options || {}).tap do |strategy|
+    OmniAuth::Strategies::WebAreal.new(app, 'appid', 'secret', @options || {}).tap do |strategy|
       allow(strategy).to receive(:request) do
         request
       end
@@ -31,15 +31,15 @@ describe OmniAuth::Strategies::SeznamCz do
 
   describe '#client_options' do
     it 'has correct site' do
-      expect(subject.client.site).to eq('https://login.szn.cz')
+      expect(subject.client.site).to eq('https://marketplace.webareal.cz')
     end
 
     it 'has correct authorize_url' do
-      expect(subject.client.options[:authorize_url]).to eq('/api/v1/oauth/auth')
+      expect(subject.client.options[:authorize_url]).to eq('/user-auth')
     end
 
     it 'has correct token_url' do
-      expect(subject.client.options[:token_url]).to eq('/api/v1/oauth/token')
+      expect(subject.client.options[:token_url]).to eq('/api/token')
     end
 
     describe 'overrides' do
@@ -89,27 +89,6 @@ describe OmniAuth::Strategies::SeznamCz do
       it 'should set the redirect_uri parameter if present' do
         @options = { redirect_uri: 'https://example.com' }
         expect(subject.authorize_params['redirect_uri']).to eq('https://example.com')
-      end
-    end
-
-    describe 'scope' do
-      it 'should join scopes' do
-        @options = { scope: 'profile,email' }
-        expect(subject.authorize_params['scope']).to eq('profile,email')
-      end
-
-      it 'should deal with whitespace when joining scopes' do
-        @options = { scope: 'profile, email' }
-        expect(subject.authorize_params['scope']).to eq('profile,email')
-      end
-
-      it 'should set default scope to identity' do
-        expect(subject.authorize_params['scope']).to eq('identity')
-      end
-
-      it 'should support space delimited scopes' do
-        @options = { scope: 'profile email' }
-        expect(subject.authorize_params['scope']).to eq('profile,email')
       end
     end
 
