@@ -7,35 +7,34 @@ require 'uri'
 module OmniAuth
   module Strategies
     # Main class for Seznam.cz strategy.
-    class WebAreal < OmniAuth::Strategies::OAuth2
-      DEFAULT_SCOPE = 'USER_INFO'
-      USER_INFO_URL = 'https://marketplace.webareal.cz/api/user/about'
+    class Shoptet < OmniAuth::Strategies::OAuth2
+      DEFAULT_SCOPE = 'basic_eshop'
+      USER_INFO_PATH = '/resource?method=getBasicEshop'
 
-      option :name, 'web_areal'
-      option :authorize_options, %i[scope state redirect_uri]
+      option :name, 'shoptet'
+      option :authorize_options, %i[client_id scope state redirect_uri]
 
       option :client_options,
-             site: 'https://marketplace.webareal.cz',
-             authorize_url: '/user-auth',
-             token_url: '/api/token',
+             authorize_url: '/authorize',
+             token_url: '/token',
              auth_scheme: :request_body
 
       def authorize_params
         super.tap do |params|
           options[:authorize_options].each do |k|
-            params[k] = request.params[k.to_s] unless [nil, ''].include?(request.params[k.to_s])
+            params[k] = request.params[k.to_s] unless ['', nil].member?(request.params[k.to_s])
           end
           params[:scope] ||= DEFAULT_SCOPE
           session['omniauth.state'] = params[:state] if params[:state]
         end
       end
 
-      uid { raw_info['user'] }
+      uid { raw_info['data']['user']['email'] }
 
       info do
         {
-          email: raw_info['user'],
-          stores: raw_info['stores']
+          email: raw_info['data']['user']['email'],
+          store: raw_info['data']['user']['project']
         }
       end
 
@@ -48,7 +47,7 @@ module OmniAuth
       end
 
       def raw_info
-        @raw_info ||= access_token.get(USER_INFO_URL).parsed
+        @raw_info ||= access_token.get(USER_INFO_PATH).parsed
       end
     end
   end
