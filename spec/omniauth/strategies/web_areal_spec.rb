@@ -79,68 +79,6 @@ describe OmniAuth::Strategies::WebAreal do
     end
   end
 
-  describe '#authorize_options' do
-    describe 'redirect_uri' do
-      it 'should default to nil' do
-        @options = {}
-        expect(subject.authorize_params['redirect_uri']).to eq(nil)
-      end
-
-      it 'should set the redirect_uri parameter if present' do
-        @options = { redirect_uri: 'https://example.com' }
-        expect(subject.authorize_params['redirect_uri']).to eq('https://example.com')
-      end
-    end
-
-    describe 'state' do
-      it 'should set the state parameter' do
-        @options = { state: 'some_state' }
-        expect(subject.authorize_params['state']).to eq('some_state')
-        expect(subject.authorize_params[:state]).to eq('some_state')
-        expect(subject.session['omniauth.state']).to eq('some_state')
-      end
-
-      it 'should set the omniauth.state dynamically' do
-        allow(subject).to receive(:request) { double('Request', params: { 'state' => 'some_state' }, env: {}) }
-        expect(subject.authorize_params['state']).to eq('some_state')
-        expect(subject.authorize_params[:state]).to eq('some_state')
-        expect(subject.session['omniauth.state']).to eq('some_state')
-      end
-    end
-
-    describe 'overrides' do
-      it 'should include top-level options that are marked as :authorize_options' do
-        @options = { authorize_options: %i[scope foo request_visible_actions], scope: 'http://bar', foo: 'baz', hd: 'wow', request_visible_actions: 'something' }
-        expect(subject.authorize_params['scope']).to eq('http://bar')
-        expect(subject.authorize_params['foo']).to eq('baz')
-        expect(subject.authorize_params['hd']).to eq(nil)
-        expect(subject.authorize_params['request_visible_actions']).to eq('something')
-      end
-
-      describe 'request overrides' do
-        %i[scope state].each do |k|
-          context "authorize option #{k}" do
-            let(:request) { double('Request', params: { k.to_s => 'http://example.com' }, cookies: {}, env: {}) }
-
-            it "should set the #{k} authorize option dynamically in the request" do
-              @options = { k: '' }
-              expect(subject.authorize_params[k.to_s]).to eq('http://example.com')
-            end
-          end
-        end
-
-        describe 'custom authorize_options' do
-          let(:request) { double('Request', params: { 'foo' => 'something' }, cookies: {}, env: {}) }
-
-          it 'should support request overrides from custom authorize_options' do
-            @options = { authorize_options: [:foo], foo: '' }
-            expect(subject.authorize_params['foo']).to eq('something')
-          end
-        end
-      end
-    end
-  end
-
   describe '#authorize_params' do
     it 'should include any authorize params passed in the :authorize_params option' do
       @options = { authorize_params: { request_visible_actions: 'something', foo: 'bar', baz: 'zip' }, hd: 'wow', bad: 'not_included' }

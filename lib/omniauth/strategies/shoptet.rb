@@ -9,24 +9,37 @@ module OmniAuth
     # Main class for Seznam.cz strategy.
     class Shoptet < OmniAuth::Strategies::OAuth2
       DEFAULT_SCOPE = 'basic_eshop'
-      USER_INFO_PATH = '/resource?method=getBasicEshop'
+      USER_INFO_PATH = '/action/OAuthServer/resource?method=getBasicEshop'
 
       option :name, 'shoptet'
-      option :authorize_options, %i[client_id scope state redirect_uri]
+      option :scope, DEFAULT_SCOPE
 
       option :client_options,
-             authorize_url: '/authorize',
-             token_url: '/token',
+             authorize_url: '/action/OAuthServer/authorize',
+             token_url: '/action/OAuthServer/token',
              auth_scheme: :request_body
+      option :authorize_options, %i[scope]
+      option :token_options, %i[scope]
 
-      def authorize_params
-        super.tap do |params|
-          options[:authorize_options].each do |k|
-            params[k] = request.params[k.to_s] unless ['', nil].member?(request.params[k.to_s])
-          end
-          params[:scope] ||= DEFAULT_SCOPE
-          session['omniauth.state'] = params[:state] if params[:state]
+      def client_site
+        if options.site
+          options.site
+        elsif request.params['shop_name']
+          shop_name = request.params['shop_name']
+          site = "https://#{shop_name}.myshoptet.com"
+          session['omniauth.shoptet.site'] = site
+          site
+        elsif session['omniauth.shoptet.site']
+          session['omniauth.shoptet.site']
+        else
+          raise 'Cannot determine client site, set :site option or shop_name request param.'
         end
+      end
+
+      def client
+        client_options = deep_symbolize(options.client_options)
+        client_options[:site] = client_site
+        ::OAuth2::Client.new(options.client_id, options.client_secret, client_options)
       end
 
       uid { raw_info['data']['user']['email'] }

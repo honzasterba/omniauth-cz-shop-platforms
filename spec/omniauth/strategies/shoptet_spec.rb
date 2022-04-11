@@ -6,7 +6,7 @@ require 'omniauth-cz-shop-platforms'
 require 'stringio'
 
 describe OmniAuth::Strategies::Shoptet do
-  let(:request) { double('Request', params: {}, cookies: {}, env: {}) }
+  let(:request) { double('Request', params: @params || {}, cookies: {}, env: { 'rack.session' => @session || {} }) }
   let(:app) do
     lambda do
       [200, {}, ['Hello.']]
@@ -17,6 +17,9 @@ describe OmniAuth::Strategies::Shoptet do
     OmniAuth::Strategies::Shoptet.new(app, 'appid', 'secret', @options || {}).tap do |strategy|
       allow(strategy).to receive(:request) do
         request
+      end
+      allow(strategy).to receive(:session) do
+        request.env['rack.session']
       end
     end
   end
@@ -29,22 +32,41 @@ describe OmniAuth::Strategies::Shoptet do
     OmniAuth.config.test_mode = false
   end
 
-  describe '#client_options' do
-    it 'has correct authorize_url' do
-      expect(subject.client.options[:authorize_url]).to eq('/authorize')
+  describe 'missing site information' do
+    it 'should raise error' do
+      expect { subject.client }.to raise_error(/Cannot determine client site/)
+    end
+  end
+
+  describe 'site override' do
+    before do
+      @options = { site: 'https://custom.site' }
     end
 
-    it 'has correct token_url' do
-      expect(subject.client.options[:token_url]).to eq('/token')
+    it 'has site from options' do
+      expect(subject.client.site).to eq('https://custom.site')
+    end
+  end
+
+  describe 'on authorize' do
+    before do
+      @params = { 'shop_name' => 'awesome-shop' }
     end
 
-    describe 'overrides' do
-      context 'as strings' do
-        it 'should allow overriding the site' do
-          @options = { client_options: { 'site' => 'https://example.com' } }
-          expect(subject.client.site).to eq('https://example.com')
-        end
+    describe '#client_options' do
+      it 'has correct authorize_url' do
+        expect(subject.client.options[:authorize_url]).to eq('/action/OAuthServer/authorize')
+      end
 
+      it 'has correct token_url' do
+        expect(subject.client.options[:token_url]).to eq('/action/OAuthServer/token')
+      end
+
+      it 'has site from request param' do
+        expect(subject.client.site).to eq('https://awesome-shop.myshoptet.com')
+      end
+
+      describe 'overrides' do
         it 'should allow overriding the authorize_url' do
           @options = { client_options: { 'authorize_url' => 'https://example.com' } }
           expect(subject.client.options[:authorize_url]).to eq('https://example.com')
@@ -53,85 +75,6 @@ describe OmniAuth::Strategies::Shoptet do
         it 'should allow overriding the token_url' do
           @options = { client_options: { 'token_url' => 'https://example.com' } }
           expect(subject.client.options[:token_url]).to eq('https://example.com')
-        end
-      end
-
-      context 'as symbols' do
-        it 'should allow overriding the site' do
-          @options = { client_options: { site: 'https://example.com' } }
-          expect(subject.client.site).to eq('https://example.com')
-        end
-
-        it 'should allow overriding the authorize_url' do
-          @options = { client_options: { authorize_url: 'https://example.com' } }
-          expect(subject.client.options[:authorize_url]).to eq('https://example.com')
-        end
-
-        it 'should allow overriding the token_url' do
-          @options = { client_options: { token_url: 'https://example.com' } }
-          expect(subject.client.options[:token_url]).to eq('https://example.com')
-        end
-      end
-    end
-  end
-
-  describe '#authorize_options' do
-    describe 'redirect_uri' do
-      it 'should default to nil' do
-        @options = {}
-        expect(subject.authorize_params['redirect_uri']).to eq(nil)
-      end
-
-      it 'should set the redirect_uri parameter if present' do
-        @options = { redirect_uri: 'https://example.com' }
-        expect(subject.authorize_params['redirect_uri']).to eq('https://example.com')
-      end
-    end
-
-    describe 'state' do
-      it 'should set the state parameter' do
-        @options = { state: 'some_state' }
-        expect(subject.authorize_params['state']).to eq('some_state')
-        expect(subject.authorize_params[:state]).to eq('some_state')
-        expect(subject.session['omniauth.state']).to eq('some_state')
-      end
-
-      it 'should set the omniauth.state dynamically' do
-        allow(subject).to receive(:request) { double('Request', params: { 'state' => 'some_state' }, env: {}) }
-        expect(subject.authorize_params['state']).to eq('some_state')
-        expect(subject.authorize_params[:state]).to eq('some_state')
-        expect(subject.session['omniauth.state']).to eq('some_state')
-      end
-    end
-
-    describe 'overrides' do
-      it 'should include top-level options that are marked as :authorize_options' do
-        @options = { authorize_options: %i[scope foo request_visible_actions], scope: 'http://bar', foo: 'baz', hd: 'wow', request_visible_actions: 'something' }
-        expect(subject.authorize_params['scope']).to eq('http://bar')
-        expect(subject.authorize_params['foo']).to eq('baz')
-        expect(subject.authorize_params['hd']).to eq(nil)
-        expect(subject.authorize_params['request_visible_actions']).to eq('something')
-      end
-
-      describe 'request overrides' do
-        %i[scope state].each do |k|
-          context "authorize option #{k}" do
-            let(:request) { double('Request', params: { k.to_s => 'http://example.com' }, cookies: {}, env: {}) }
-
-            it "should set the #{k} authorize option dynamically in the request" do
-              @options = { k: '' }
-              expect(subject.authorize_params[k.to_s]).to eq('http://example.com')
-            end
-          end
-        end
-
-        describe 'custom authorize_options' do
-          let(:request) { double('Request', params: { 'foo' => 'something' }, cookies: {}, env: {}) }
-
-          it 'should support request overrides from custom authorize_options' do
-            @options = { authorize_options: [:foo], foo: '' }
-            expect(subject.authorize_params['foo']).to eq('something')
-          end
         end
       end
     end
@@ -144,6 +87,16 @@ describe OmniAuth::Strategies::Shoptet do
       expect(subject.authorize_params['foo']).to eq('bar')
       expect(subject.authorize_params['baz']).to eq('zip')
       expect(subject.authorize_params['bad']).to eq(nil)
+    end
+  end
+
+  describe 'token phase' do
+    before do
+      @session = { 'omniauth.shoptet.site' => 'SITE_SESSION' }
+    end
+
+    it 'should take client site from session' do
+      expect(subject.client.site).to eq('SITE_SESSION')
     end
   end
 

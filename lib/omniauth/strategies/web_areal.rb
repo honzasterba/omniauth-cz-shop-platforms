@@ -12,23 +12,14 @@ module OmniAuth
       USER_INFO_URL = 'https://marketplace.webareal.cz/api/user/about'
 
       option :name, 'web_areal'
-      option :authorize_options, %i[scope state redirect_uri]
+      option :authorize_options, %i[scope]
+      option :scope, DEFAULT_SCOPE
 
       option :client_options,
              site: 'https://marketplace.webareal.cz',
              authorize_url: '/user-auth',
              token_url: '/api/token',
              auth_scheme: :request_body
-
-      def authorize_params
-        super.tap do |params|
-          options[:authorize_options].each do |k|
-            params[k] = request.params[k.to_s] unless [nil, ''].include?(request.params[k.to_s])
-          end
-          params[:scope] ||= DEFAULT_SCOPE
-          session['omniauth.state'] = params[:state] if params[:state]
-        end
-      end
 
       uid { raw_info['user'] }
 
