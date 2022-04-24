@@ -42,12 +42,13 @@ module OmniAuth
         ::OAuth2::Client.new(options.client_id, options.client_secret, client_options)
       end
 
-      uid { raw_info['data']['user']['email'] }
+      uid { raw_info['user']['email'] }
 
       info do
         {
-          email: raw_info['data']['user']['email'],
-          store: raw_info['data']['user']['project']
+          email: raw_info['user']['email'],
+          name: raw_info['user']['name'],
+          store: raw_info['project']
         }
       end
 
@@ -60,7 +61,7 @@ module OmniAuth
       end
 
       def raw_info
-        @raw_info ||= access_token.get(USER_INFO_PATH).parsed
+        @raw_info ||= access_token.get(USER_INFO_PATH).parsed['data']
       end
     end
   end
