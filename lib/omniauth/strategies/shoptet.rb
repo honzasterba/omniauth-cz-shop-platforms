@@ -15,8 +15,8 @@ module OmniAuth
       option :scope, DEFAULT_SCOPE
 
       option :client_options,
-             authorize_url: '/action/OAuthServer/authorize',
-             token_url: '/action/OAuthServer/token',
+             authorize_url: 'authorize',
+             token_url: 'token',
              auth_scheme: :request_body
       option :authorize_options, %i[scope]
       option :token_options, %i[scope]
@@ -24,15 +24,14 @@ module OmniAuth
       def client_site
         if options.site
           options.site
-        elsif request.params['shop_name']
-          shop_name = request.params['shop_name']
-          site = "https://#{shop_name}.myshoptet.com"
-          session['omniauth.shoptet.site'] = site
-          site
+        elsif request.params['shoptet_site']
+          shoptet_site = request.params['shoptet_site']
+          session['omniauth.shoptet.site'] = shoptet_site
+          shoptet_site
         elsif session['omniauth.shoptet.site']
           session['omniauth.shoptet.site']
         else
-          raise 'Cannot determine client site, set :site option or shop_name request param.'
+          raise 'Cannot determine client site, set :site option or shoptet_site request param or .'
         end
       end
 

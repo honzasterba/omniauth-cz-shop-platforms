@@ -50,20 +50,20 @@ describe OmniAuth::Strategies::Shoptet do
 
   describe 'on authorize' do
     before do
-      @params = { 'shop_name' => 'awesome-shop' }
+      @params = { 'shoptet_site' => 'https://awesome-shop.myshoptet.com/action/OAuthServer/' }
     end
 
     describe '#client_options' do
       it 'has correct authorize_url' do
-        expect(subject.client.options[:authorize_url]).to eq('/action/OAuthServer/authorize')
+        expect(subject.client.options[:authorize_url]).to eq('authorize')
       end
 
       it 'has correct token_url' do
-        expect(subject.client.options[:token_url]).to eq('/action/OAuthServer/token')
+        expect(subject.client.options[:token_url]).to eq('token')
       end
 
       it 'has site from request param' do
-        expect(subject.client.site).to eq('https://awesome-shop.myshoptet.com')
+        expect(subject.client.site).to eq('https://awesome-shop.myshoptet.com/action/OAuthServer/')
       end
 
       describe 'overrides' do
